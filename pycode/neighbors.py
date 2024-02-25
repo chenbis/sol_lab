@@ -1,5 +1,6 @@
 import json
 import pandas as pd
+from tqdm import tqdm
 
 # sorts amino acids couples according to the distance df
 
@@ -15,35 +16,39 @@ def get_sorted_substitutions(distances_df):
 
     return sorted(substitutions, key=lambda x: x[2])
 
+def seq_to_dict(seq):
+    result_dict = {}
+    for idx, char in enumerate(seq):
+        if char in result_dict:
+            result_dict[char].append(idx)
+        else:
+            result_dict[char] = [idx]
+    return result_dict
 
 def find_couples(sequences_set, sorted_amino, max_neighbors=1):
     couples = {}
-    for seq in sequences_set:
-        letter_indexes = {}
-        couples[seq] = set()
+    for seq in tqdm(sequences_set, desc="Progress", unit=" sequence"):
+        dict_seq = seq_to_dict(seq)
+        couples[seq] = []
         flag = 0
         for sub in sorted_amino:
-            
+            if sub[0] not in dict_seq:
+                continue
+
             if flag < max_neighbors:
-                if not sub[0] in letter_indexes:
-                    letter_indexes[sub[0]] = [index for index, char in enumerate(seq) if char == sub[0]]
-                for occ in letter_indexes[sub[0]]:
+                for occ in dict_seq[sub[0]]:
                     seq_to_search = seq[:occ] + sub[1] + seq[occ + 1:]
-                    # if seq_to_search in couples:
-                    #     continue
+                    distance = sub[2]
                     if seq_to_search in sequences_set:
-                        
-                        # print(seq, seq_to_search)
-                        couples[seq].add(seq_to_search)
+                        couples[seq].append([seq_to_search, distance])
                         flag += 1
                         if flag < max_neighbors:
                             break
-
-                
             else:
-                continue
+                break
 
     return couples
+
 
 
 # read distance matrix
