@@ -7,21 +7,14 @@ import json
 df = pd.read_csv('files/atchley.csv')
 df.set_index('amino.acid', inplace=True)
 atchley_features = df.to_dict(orient='index')
-for key, value in atchley_features.items():
-    atchley_features[key] = list(value.values())
 
 
 def hash_atchley_sha_int(sequence):
-
-    hash_input = ''
-    for aa in sequence:
-        hash_input += ''.join(map(str, atchley_features.get(aa)))
-    hash_object = hashlib.sha256(hash_input.encode())
-    hash_digest = hash_object.digest()
-    
-    # Convert the hexadecimal digest to a decimal number
-    hash_number = int.from_bytes(hash_digest, byteorder='big')
+    hash_input = tuple(atchley_features.get(aa) for aa in sequence)
+    hash_object = hashlib.sha256(str(hash_input).encode())
+    hash_number = int.from_bytes(hash_object.digest(), byteorder='big')
     return hash_number
+
 
 def hash_sequences(mutations_lst, hash_method):
     new_lst = []
@@ -82,13 +75,7 @@ for seq in tqdm(sequences_set, desc="generating mutations"):
     couples[seq] = []
     mutations_lst = generate_mutations(seq, max_mutations, mutations_lst)
 
-    # combined = sequences_hashed + mutations_hashed
-    # combined.sort()
-    # duplicates = find_duplicates(combined)
-    # if duplicates:
-    #     for dup in duplicates:
-    #         dup = sequence_map[dup]
-    #         couples[seq].append([dup, get_distance(seq, dup)])
+
 mutations_lst = hash_sequences(mutations_lst, hash_atchley_sha_int)
 
 mutations_df = pd.DataFrame(mutations_lst, columns=['mut', 'mut_hash', 'org'])
@@ -100,14 +87,21 @@ distances_df = pd.read_csv(distances_csv, index_col=0)
 
 couples = {}
 
-for seq in tqdm(sequences_set, "finding close sequences"):
+# for seq in tqdm(sequences_set, "finding close sequences"):
 
-    couples[seq] = []
-    filtered_df = mutations_sorted[(mutations_sorted['org'] == seq)\
-                                    | (mutations_sorted['org'] == "")]
-    duplicate_values = filtered_df[filtered_df.duplicated(['mut_hash'])]
+# couples[seq] = []
+# filtered_df = mutations_sorted[(mutations_sorted['org'] == seq)\
+#                                 | (mutations_sorted['org'] == "")]
 
-    for dup in duplicate_values['mut']:
+duplicate_values = mutations_sorted[mutations_sorted.duplicated(['mut_hash'])]
+
+for index, row in duplicate_values.iterrows():
+    seq = row["org"]
+    dup = row["mut"]
+    if seq != "":
+        if not seq in couples:
+            couples[seq] = []
+        # print(row["mut"], row["org"])   
         couples[seq].append([dup, get_distance(seq, dup, distances_df)])
 
 
