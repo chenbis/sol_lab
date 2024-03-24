@@ -3,6 +3,9 @@ import itertools
 import hashlib
 from tqdm import tqdm
 import json
+from collections import defaultdict
+from multiprocessing import Pool
+
 
 df = pd.read_csv('files/atchley.csv')
 df.set_index('amino.acid', inplace=True)
@@ -16,7 +19,7 @@ def hash_atchley_sha_int(sequence):
     hash_input = ''
     for aa in sequence:
         hash_input += ''.join(map(str, atchley_features.get(aa)))
-    hash_object = hashlib.sha256(hash_input.encode())
+    hash_object = hashlib.md5(hash_input.encode())
     hash_digest = hash_object.digest()
     
     # Convert the hexadecimal digest to a decimal number
@@ -31,10 +34,10 @@ def hash_sequences(mutations_lst, hash_method):
     return new_lst
 
 
-def generate_mutations(sequence, number, mutations_lst):
-    mutations_lst.append([sequence, 0, ""])
+def generate_mutations(sequence, max_mutations):
+    yield sequence, 0, ""
     aa = 'ACDEFGHIKLMNPQRSTVWY'
-    for i in range(1, number + 1):
+    for i in range(1, max_mutations + 1):
         for positions in itertools.combinations(range(len(sequence)), i):
             for new_aas in itertools.product(aa, repeat=i):
                 mutated_sequence = list(sequence)
@@ -42,15 +45,15 @@ def generate_mutations(sequence, number, mutations_lst):
                     mutated_sequence[pos] = new_aa
                 mutated_sequence = "".join(mutated_sequence)
                 if mutated_sequence != sequence:
-                    mutations_lst.append([mutated_sequence, 0, sequence])
-                    # mutations_df = mutations_df.append({'mutation': mutated_sequence, 'original': sequence}, ignore_index=True)
+                    yield mutated_sequence, 0, sequence
 
-    return mutations_lst
+def process_sequence(seq):
+    max_mutations = 2
+    return list(generate_mutations(seq, max_mutations))
 
-
-def get_distance(seq1, seq2, distances_df):
-    distance = sum([distances_df.loc[aa1, aa2] for aa1, aa2 in zip(seq1, seq2) if aa1 != aa2])
-    return distance
+# def get_distance(seq1, seq2, distances_df):
+#     distance = sum([distances_df.loc[aa1, aa2] for aa1, aa2 in zip(seq1, seq2) if aa1 != aa2])
+#     return distance
 
 
 sequence_map = {}
@@ -71,24 +74,17 @@ sequences_set = set(sequences_df[sequences_header].unique())
 # sequences_hashed = hash_sequences(sequences_set, hash_atchley_sha_int,sequence_map)
 
 
-max_mutations = 1
-
-couples = {}
-# pd.DataFrame(columns=['mutation','mutation_hash' 'original'])
+# max_mutations = 2
+batch_size = 100
 mutations_lst = []
+sequences_list = list(sequences_set)
+for i in tqdm(range(0, len(sequences_list), batch_size), desc="generating mutations"):
+    batch_sequences = sequences_list[i:i+batch_size]
+    with Pool() as pool:
+        mutations_lst.extend(pool.map(process_sequence, batch_sequences))
 
+mutations_lst = list(itertools.chain.from_iterable(mutations_lst))
 
-for seq in tqdm(sequences_set, desc="generating mutations"):
-    couples[seq] = []
-    mutations_lst = generate_mutations(seq, max_mutations, mutations_lst)
-
-    # combined = sequences_hashed + mutations_hashed
-    # combined.sort()
-    # duplicates = find_duplicates(combined)
-    # if duplicates:
-    #     for dup in duplicates:
-    #         dup = sequence_map[dup]
-    #         couples[seq].append([dup, get_distance(seq, dup)])
 mutations_lst = hash_sequences(mutations_lst, hash_atchley_sha_int)
 
 mutations_df = pd.DataFrame(mutations_lst, columns=['mut', 'mut_hash', 'org'])
@@ -97,19 +93,18 @@ mutations_sorted = mutations_df.sort_values(by='mut_hash')
 
 distances_csv = "distance_matrix.csv"
 distances_df = pd.read_csv(distances_csv, index_col=0)
+distances_dict = {(aa1, aa2): distances_df.loc[aa1, aa2] for aa1 in distances_df.index for aa2 in distances_df.columns}# distances_dict = distances_df.to_dict()
 
-couples = {}
+couples = defaultdict(list)
+mask_org_empty = mutations_sorted['org'] == ""
+duplicates_with_empty_org = mutations_sorted[mutations_sorted.duplicated(['mut_hash'], keep=False) & mask_org_empty]
+filtered_df = mutations_sorted[mutations_sorted['mut_hash'].isin(duplicates_with_empty_org['mut_hash'])]
 
-for seq in tqdm(sequences_set, "finding close sequences"):
-
-    couples[seq] = []
-    filtered_df = mutations_sorted[(mutations_sorted['org'] == seq)\
-                                    | (mutations_sorted['org'] == "")]
-    duplicate_values = filtered_df[filtered_df.duplicated(['mut_hash'])]
-
-    for dup in duplicate_values['mut']:
-        couples[seq].append([dup, get_distance(seq, dup, distances_df)])
-
+for index, row in tqdm(filtered_df.iterrows(), "finding duplicates"):
+    if row["org"] != "":
+        mut = row["mut"]
+        seq = row["org"]
+        couples[seq].append([mut, sum(distances_dict[(aa1, aa2)] for aa1, aa2 in zip(seq, mut))])
 
 couples = {key: sorted(value, key=lambda x: x[1]) for key, value in couples.items()}
 
