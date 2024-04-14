@@ -2,7 +2,7 @@ import pandas as pd
 import itertools
 from tqdm import tqdm
 from collections import defaultdict
-import json, csv
+import json, csv, time
 
 def generate_mutations(sequence, max_mutations):
     yield sequence, ""
@@ -29,7 +29,7 @@ def truncate_sequences(csv_file, column_name, right, left):
             yield sequence[start_index:end_index]
 
 def main():
-
+    
     # 1000 sequences
     sequences_file = 'files/forchen_F_26L.csv'
     sequences_header = "cdr3_amino_acid"
@@ -42,39 +42,60 @@ def main():
     sequences_file = "random_sequences.csv"
     sequences_header = "sequences"
 
+    print("truncating sequences")
+    start_time = time.time()
     sequences_set = truncate_sequences(sequences_file, sequences_header, 4, 4)
+    end_time = time.time()
+    print("total time:", end_time - start_time, "seconds")
 
     max_mutations = 1
     mutations_file = "mutations.csv"
 
-    
+    print("creating mutations")
+    start_time = time.time()
     with open(mutations_file, "w") as f:
-        for seq in tqdm(sequences_set, desc="generating mutations"):
+        for seq in sequences_set:
             for mut, org in generate_mutations(seq, max_mutations):
                 f.write(f"{mut},{org}\n")
 
-    mutations_df = pd.read_csv(mutations_file, names=['mut', 'org'], na_filter=False)
+    end_time = time.time()
+    print("total time:", end_time - start_time, "seconds")
 
+    print("conveting to pandas")
+    start_time = time.time()
+    mutations_df = pd.read_csv(mutations_file, names=['mut', 'org'], na_filter=False)
+    end_time = time.time()
+    print("total time:", end_time - start_time, "seconds")
+    
     distances_csv = "distance_matrix.csv"
     distances_df = pd.read_csv(distances_csv, index_col=0)
     distances_dict = {(aa1, aa2): distances_df.loc[aa1, aa2] for aa1 in distances_df.index for aa2 in distances_df.columns}
+    
+
+
+    print("finding duplicates")
+    start_time = time.time()
 
     couples = defaultdict(list)
     mask_org_empty = mutations_df['org'] == ""
     duplicates_with_empty_org = mutations_df[mutations_df.duplicated(['mut'], keep=False) & mask_org_empty]
     filtered_df = mutations_df[mutations_df['mut'].isin(duplicates_with_empty_org['mut'])]
 
-    for _, row in tqdm(filtered_df.iterrows(), desc="finding duplicates"):
+    for _, row in filtered_df.iterrows():
         if row["org"] != "":
             mut = row["mut"]
             seq = row["org"]
             couples[seq].append([mut, sum(distances_dict[(aa1, aa2)] for aa1, aa2 in zip(seq, mut))])
+    end_time = time.time()
+    print("total time:", end_time - start_time, "seconds")
 
     couples = {key: sorted(value, key=lambda x: x[1]) for key, value in couples.items()}
 
     output_file = "couples.json"
     with open(output_file, "w") as f:
         json.dump(couples, f)
+
+
 
 if __name__ == "__main__":
     main()
