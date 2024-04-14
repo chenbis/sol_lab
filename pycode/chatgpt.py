@@ -1,13 +1,13 @@
 import pandas as pd
 import itertools
-from tqdm import tqdm
 from collections import defaultdict
 import json, csv, time
+from tqdm import tqdm
 
-def generate_mutations(sequence, max_mutations):
+def generate_mutations(sequence, max_mutations, sequences_set):
     yield sequence, ""
     aa = 'ACDEFGHIKLMNPQRSTVWY'
-    processed = set()
+    # processed = set()
     for i in range(1, max_mutations + 1):
         for positions in itertools.combinations(range(len(sequence)), i):
             for new_aas in itertools.product(aa, repeat=i):
@@ -15,8 +15,9 @@ def generate_mutations(sequence, max_mutations):
                 for pos, new_aa in zip(positions, new_aas):
                     mutated_sequence[pos] = new_aa
                 mutated_sequence = "".join(mutated_sequence)
-                if mutated_sequence != sequence and mutated_sequence not in processed:
-                    processed.add(mutated_sequence)
+                
+                if mutated_sequence != sequence and mutated_sequence in sequences_set:
+                    # processed.add(mutated_sequence)
                     yield mutated_sequence, sequence
 
 def truncate_sequences(csv_file, column_name, right, left):
@@ -29,50 +30,50 @@ def truncate_sequences(csv_file, column_name, right, left):
             yield sequence[start_index:end_index]
 
 def main():
-    
+    total_start_time = time.time()
     # 1000 sequences
     sequences_file = 'files/forchen_F_26L.csv'
     sequences_header = "cdr3_amino_acid"
 
-    # 40K sequences
-    sequences_file = 'files/for_chen_B.csv'
-    sequences_header = "CDR3.aa"
+    # # 40K sequences
+    # sequences_file = 'files/for_chen_B.csv'
+    # sequences_header = "CDR3.aa"
 
-    # 1M sequences
-    sequences_file = "random_sequences.csv"
-    sequences_header = "sequences"
+    # # 1M sequences
+    # sequences_file = "random_sequences.csv"
+    # sequences_header = "sequences"
 
     print("truncating sequences")
     start_time = time.time()
-    sequences_set = truncate_sequences(sequences_file, sequences_header, 4, 4)
+    sequences_set = set(truncate_sequences(sequences_file, sequences_header, 4, 4))
     end_time = time.time()
-    print("total time:", end_time - start_time, "seconds")
+    print("time:", (end_time - start_time)/60, "minutes")
 
-    max_mutations = 1
+    max_mutations = 3
     mutations_file = "mutations.csv"
 
     print("creating mutations")
     start_time = time.time()
     with open(mutations_file, "w") as f:
-        for seq in sequences_set:
-            for mut, org in generate_mutations(seq, max_mutations):
+        for seq in tqdm(sequences_set):
+            for mut, org in generate_mutations(seq, max_mutations, sequences_set):
                 f.write(f"{mut},{org}\n")
 
     end_time = time.time()
-    print("total time:", end_time - start_time, "seconds")
+    print("time:", (end_time - start_time)/60, "minutes")
+
 
     print("conveting to pandas")
     start_time = time.time()
     mutations_df = pd.read_csv(mutations_file, names=['mut', 'org'], na_filter=False)
     end_time = time.time()
-    print("total time:", end_time - start_time, "seconds")
-    
+    print("time:", (end_time - start_time)/60, "minutes")
+
+
     distances_csv = "distance_matrix.csv"
     distances_df = pd.read_csv(distances_csv, index_col=0)
     distances_dict = {(aa1, aa2): distances_df.loc[aa1, aa2] for aa1 in distances_df.index for aa2 in distances_df.columns}
     
-
-
     print("finding duplicates")
     start_time = time.time()
 
@@ -87,7 +88,8 @@ def main():
             seq = row["org"]
             couples[seq].append([mut, sum(distances_dict[(aa1, aa2)] for aa1, aa2 in zip(seq, mut))])
     end_time = time.time()
-    print("total time:", end_time - start_time, "seconds")
+    print("time:", (end_time - start_time)/60, "minutes")
+
 
     couples = {key: sorted(value, key=lambda x: x[1]) for key, value in couples.items()}
 
@@ -95,7 +97,8 @@ def main():
     with open(output_file, "w") as f:
         json.dump(couples, f)
 
-
+    total_end_time = time.time()
+    print("total time:", (total_end_time - total_start_time)/60, "minutes")
 
 if __name__ == "__main__":
     main()
