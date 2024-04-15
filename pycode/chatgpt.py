@@ -49,7 +49,7 @@ def main():
     end_time = time.time()
     print("time:", (end_time - start_time)/60, "minutes")
 
-    max_mutations = 3
+    max_mutations = 2
     mutations_file = "mutations.csv"
 
     print("creating mutations")
@@ -58,6 +58,7 @@ def main():
         for seq in tqdm(sequences_set):
             for mut, org in generate_mutations(seq, max_mutations, sequences_set):
                 f.write(f"{mut},{org}\n")
+                # f.flush()
 
     end_time = time.time()
     print("time:", (end_time - start_time)/60, "minutes")
