@@ -6,7 +6,7 @@ from tqdm import tqdm
 from concurrent.futures import ProcessPoolExecutor
  
 MUTATIONS_DIR = "mutations"
-max_mutations = 1
+max_mutations = 3
 
 def generate_mutations(sequence, max_mutations, sequences_set: set, output_file):
     aa = 'ACDEFGHIKLMNPQRSTVWY'
@@ -52,6 +52,11 @@ def delete_mutation_folder():
 #     os.makedirs(MUTATIONS_DIR, exist_ok=True)
     return sub_folder
 
+def chunks(lst, n):
+    """Yield successive n-sized chunks from lst."""
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]
+
 def main():
     total_start_time = time.time()
     sub_folder = delete_mutation_folder()
@@ -64,9 +69,9 @@ def main():
     # sequences_file = 'files/for_chen_B.csv'
     # sequences_header = "CDR3.aa"
 
-    # # 1M sequences
-    # sequences_file = "random_sequences.csv"
-    # sequences_header = "sequences"
+    # 1M sequences
+    sequences_file = "random_sequences.csv"
+    sequences_header = "sequences"
 
     print("truncating sequences")
     start_time = time.time()
@@ -83,10 +88,16 @@ def main():
     #     for future in tqdm(futures):
     #         future.result()  # Wait for each thread to finish before proceeding
 
-    with ProcessPoolExecutor(max_workers=100) as executor:
-        futures = [executor.submit(process_sequence, seq, max_mutations, sequences_set, sub_folder) for seq in tqdm(sequences_set)]
-        for future in tqdm(futures):
-            future.result()  # Wait for each process to finish before proceeding
+    # Process sequences in batches
+    max_workers = 20
+    batch_size = len(sequences_set) // max_workers + (1 if len(sequences_set) % max_workers != 0 else 0)
+    with tqdm(total=len(sequences_set)) as pbar:
+        for batch_seqs in chunks(list(sequences_set), batch_size):
+            with ProcessPoolExecutor(max_workers=max_workers) as executor:
+                futures = [executor.submit(process_sequence, seq, max_mutations, sequences_set, sub_folder) for seq in tqdm(batch_seqs)]
+                for future in futures:
+                    future.result()  # Wait for each process to finish before proceeding
+                    pbar.update(1)
 
     end_time = time.time()
     print("time:", (end_time - start_time)/60, "minutes")
