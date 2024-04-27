@@ -5,7 +5,6 @@ from collections import defaultdict
 import json
 
 def generate_mutations(sequence, max_mutations):
-    yield sequence, ""
     aa = 'ACDEFGHIKLMNPQRSTVWY'
     for i in range(1, max_mutations + 1):
         for positions in itertools.combinations(range(len(sequence)), i):
@@ -16,6 +15,7 @@ def generate_mutations(sequence, max_mutations):
                 mutated_sequence = "".join(mutated_sequence)
                 if mutated_sequence != sequence:
                     yield mutated_sequence, sequence
+
 
 
 def truncate_sequences(sequences, right, left):
@@ -38,15 +38,15 @@ def main():
     # sequences_header = "CDR3.aa"
 
     # # 1M sequences
-    # sequences_csv = "../random_sequences.csv"
+    # sequences_csv = "random_sequences.csv"
     # sequences_header = "sequences"
 
     sequences_df = pd.read_csv(sequences_csv)
     sequences_set = set(sequences_df[sequences_header].unique())
-    sequences_set = truncate_sequences(sequences_set, 4, 4)
+    sequences_set = set(truncate_sequences(sequences_set, 4, 4))
 
 
-    max_mutations = 1
+    max_mutations = 3
 
     mutations_lst = []
 
