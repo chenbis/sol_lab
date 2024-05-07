@@ -8,23 +8,23 @@ from pathlib import Path
 
 
 
-# def find_strings_within_distance(sequences_set, seq, limit):
-#     def hamming_distance(seq1, seq2):
-#         distance = 0
-#         for c1, c2 in zip(seq1, seq2):
-#             if c1 != c2:
-#                 distance += 1
-#                 if distance > limit:
-#                     return False
-#         return distance
-#     close = set()
-#     for var in sequences_set:
-#         if hamming_distance(var, seq):
-#             close.add(var)
-#     return close
+def find_strings_within_distance(sequences_set, seq, limit):
+    def hamming_distance(seq1, seq2):
+        distance = 0
+        for c1, c2 in zip(seq1, seq2):
+            if c1 != c2:
+                distance += 1
+                if distance > limit:
+                    return False
+        return distance
+    close = set()
+    for var in sequences_set:
+        if hamming_distance(var, seq):
+            close.add(var)
+    return close
     
-def find_strings_within_distance(strings_set, new_string, max_distance):
-    return {string for string in strings_set if string != new_string and distance(string, new_string) <= max_distance}
+# def find_strings_within_distance(strings_set, new_string, max_distance):
+#     return {string for string in strings_set if string != new_string and distance(string, new_string) <= max_distance}
 
 def truncate_sequences(args):
     csv_file, column_name, right, left = args
@@ -33,6 +33,8 @@ def truncate_sequences(args):
         reader = csv.DictReader(csvfile)
         for row in reader:
             sequence = row[column_name].strip()
+            if sequence == "":
+                continue
             start_index = max(0, len(sequence)//2 - left)
             end_index = min(len(sequence), len(sequence)//2 + right)
             sequences_set.add(sequence[start_index:end_index])
@@ -96,7 +98,6 @@ def find_che_phy_dist(sequences_set):
 
 def find_lev_dist(sequences_set, cutoff=4):
     couples = defaultdict(list)
-    sequences_set.remove("")
     for seq in sequences_set:
         close_matches = [word for word in sequences_set if word != seq and distance(seq, word) <= cutoff]
         for mut in close_matches:
