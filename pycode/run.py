@@ -3,9 +3,8 @@ from collections import defaultdict
 import time
 import networkx as nx
 import pandas as pd
-from sklearn.metrics import adjusted_rand_score
 from tqdm import tqdm
-
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
 def map_trunc_to_full(couples, full_to_trunc_map):
     # Initialize an empty dictionary for the full couples
@@ -95,9 +94,34 @@ def classify(clusters, data):
     return cluster_classification
 
 
+
+
+def hamming_distance(seq1, seq2):
+    return sum(c1 != c2 for c1, c2 in zip(seq1, seq2))
+
+def find_sequences_within_distance(cdr3_list, max_dist):
+    """Find all sequences that are within a Hamming distance of 1 for each sequence."""
+    result = defaultdict(list)
+    
+    for i, seq1 in enumerate(cdr3_list):
+        # Initialize an empty list for each sequence
+        
+        for seq2 in cdr3_list:
+            # Skip comparing the sequence with itself
+            if seq1 == seq2:
+                continue
+            
+            # If the Hamming distance is 1, add to the list
+            distance = hamming_distance(seq1, seq2)
+            if distance <= max_dist:
+                result[seq1].append([seq2, distance])
+    
+    return result
+
+
 def main():
 
-    max_mutations = 3
+    max_mutations = 8
     out_folder = "output_files/tests"
     out_name = "test"
     max_neig = 1
@@ -118,13 +142,13 @@ def main():
     # vdjdb beta chain
     data = pd.read_csv("files/vdjdb_cdr3.csv")
     data = data[data["vdjdb.score"] == 3]
-    # sequences_file = "files/vdjdb_cdr3.csv"
+    
     cdr3_header = "cdr3"
     epitope_header = "antigen.epitope"
+
     data.drop_duplicates(subset=cdr3_header)
     cdr3 = list(data[cdr3_header])
     
-
     couples_full = find_close_sequences(cdr3, max_mutations)
     
     start_time = time.time()
@@ -132,7 +156,6 @@ def main():
     end_time = time.time()
     elapsed_time = (end_time - start_time) / 60
     print(f"Time taken to write full couples: {elapsed_time:.2f} minutes")
-
 
 
     start_time = time.time()
@@ -157,17 +180,87 @@ def main():
         data.loc[data['cdr3'].isin(tcrs), 'epitope.pred'] = predicted_epitope
 
 
+    ### start ham ###
+
+    couples_ham = find_sequences_within_distance(cdr3, 8)
+
+    start_time = time.time()
+    cpm.write_couples_file(couples_ham, "{}/{}".format(out_folder, cdr3_header), "{}_ham".format(out_name))
+    end_time = time.time()
+    elapsed_time = (end_time - start_time) / 60
+    print(f"Time taken to write full couples: {elapsed_time:.2f} minutes")
+
+    start_time = time.time()
+    cluster_dict_pred = map_clusters(couples_ham, max_neig)
+    end_time = time.time()
+    elapsed_time = (end_time - start_time) / 60
+    print(f"{elapsed_time:.2f} minutes")
+    # cluster_dict_true = get_true_clusters(data, cdr3_header, epitope_header)
+
+    start_time = time.time()
+    cluster_classification = classify(cluster_dict_pred, data)
+    end_time = time.time()
+    elapsed_time = (end_time - start_time) / 60
+    print(f"{elapsed_time:.2f} minutes")
+
+
+    data['epitope.ham'] = None
+
+    
+    for cluster, tcrs in tqdm(cluster_dict_pred.items()):
+        predicted_epitope = cluster_classification[cluster]
+        data.loc[data['cdr3'].isin(tcrs), 'epitope.ham'] = predicted_epitope
+
+
+
+    ### end ham ###
+
+
+
+
     data.to_csv("{}/{}/predicted clusters.csv".format(out_folder, cdr3_header), encoding='utf-8', index=False)
 
+    # data = pd.read_csv("output_files/tests/cdr3/predicted clusters.csv")
 
-    # ari = adjusted_rand_score(cluster_dict_true, cluster_dict_pred)
-    
+    data_chepy = data.dropna(subset=["epitope.pred"])
+
+    # Calculate accuracy
+    accuracy = accuracy_score(data_chepy['antigen.epitope'], data_chepy['epitope.pred'])
+
+    # Calculate precision
+    precision = precision_score(data_chepy['antigen.epitope'], data_chepy['epitope.pred'], average='weighted', zero_division=0)
+
+    # Calculate recall
+    recall = recall_score(data_chepy['antigen.epitope'], data_chepy['epitope.pred'], average='weighted', zero_division=0)
+
+    f1 = f1_score(data_chepy['antigen.epitope'], data_chepy['epitope.pred'], average='weighted', zero_division=0)
+
+    # Print the results
+    print(f'chephy Accuracy: {accuracy}')
+    print(f'chephy Precision: {precision}')
+    print(f'chephy Recall: {recall}')
+    print(f'chephy f1_score: {f1}')
+    print()
 
 
-    # print(ari)
-    # cpm.write_couples_file(couples_full, "{}/{}".format(out_folder, header), "{}_full".format(out_name))
+    data_ham = data.dropna(subset=["epitope.ham"])
 
+    # Calculate accuracy
+    accuracy = accuracy_score(data_ham['antigen.epitope'], data_ham['epitope.ham'])
 
+    # Calculate precision
+    precision = precision_score(data_ham['antigen.epitope'], data_ham['epitope.ham'], average='weighted', zero_division=0)
+
+    # Calculate recall
+    recall = recall_score(data_ham['antigen.epitope'], data_ham['epitope.ham'], average='weighted', zero_division=0)
+
+    f1 = f1_score(data_ham['antigen.epitope'], data_ham['epitope.ham'], average='weighted', zero_division=0)
+
+    # Print the results
+    print(f'ham Accuracy: {accuracy}')
+    print(f'ham Precision: {precision}')
+    print(f'ham Recall: {recall}')
+    print(f'ham f1_score: {f1}')
 
 
 
