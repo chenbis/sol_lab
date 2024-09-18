@@ -88,7 +88,10 @@ def find_che_phy_dist(sequences_set, max_mutations):
 
     for seq in neighbors:
         for var in neighbors[seq]:
-            couples[seq].append([var, sum(distances_dict[(aa1, aa2)] for aa1, aa2 in zip(seq, var))])
+            actual_distance = sum(distances_dict[(aa1, aa2)] for aa1, aa2 in zip(seq, var))
+            worst_case_distance = get_worst_case_distance(seq, distances_df)
+            normalized_distance = actual_distance / worst_case_distance if worst_case_distance > 0 else 0
+            couples[seq].append([var, normalized_distance])
 
     couples = {key: sorted(value, key=lambda x: x[1]) for key, value in couples.items()}
     return couples
@@ -101,3 +104,12 @@ def write_couples_file(couples, directory, filename):
     with open(output_file, "w") as f:
         ujson.dump(couples, f)
 
+
+
+def get_worst_case_distance(seq, substitution_matrix):
+    max_distance = 0
+    for aa in seq:
+        # For each amino acid, find the maximum possible substitution cost
+        max_substitution_cost = substitution_matrix[aa].max()
+        max_distance += max_substitution_cost
+    return max_distance

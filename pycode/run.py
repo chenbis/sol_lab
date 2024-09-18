@@ -114,7 +114,7 @@ def find_sequences_within_distance(cdr3_list, max_dist):
             # If the Hamming distance is 1, add to the list
             distance = hamming_distance(seq1, seq2)
             if distance <= max_dist:
-                result[seq1].append([seq2, distance])
+                result[seq1].append([seq2, distance/8])
     
     return result
 
@@ -127,16 +127,8 @@ def main():
     max_neig = 1
 
     # # 1000 sequences
-    # sequences_file = 'files/forchen_F_26L.csv'
-    # sequences_headers = ["cdr3_amino_acid"]
-
-    # # 40K sequences
-    # sequences_file = 'files/for_chen_B2.csv'
-    # sequences_headers = ["CDR3.aa"]
-
-    # # 1M sequences
-    # sequences_file = "random_sequences.csv"
-    # sequences_headers = ["sequences"]
+    # data = pd.read_csv('files/forchen_F_26L.csv')
+    # cdr3_header = "cdr3_amino_acid"
 
 
     # vdjdb beta chain
@@ -182,7 +174,7 @@ def main():
 
     ### start ham ###
 
-    couples_ham = find_sequences_within_distance(cdr3, 8)
+    couples_ham = find_sequences_within_distance(cdr3, max_mutations)
 
     start_time = time.time()
     cpm.write_couples_file(couples_ham, "{}/{}".format(out_folder, cdr3_header), "{}_ham".format(out_name))
