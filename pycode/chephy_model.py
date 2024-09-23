@@ -32,7 +32,7 @@ def find_sequences_within_distance(tree, sequence, max_diff):
 
 def truncate_sequences(sequences, right=4, left=4):
 
-    full_to_trunc_map = defaultdict(list)
+    full_to_trunc_map = defaultdict(set)
 
     sequences_set = set()
     for sequence in sequences:
@@ -42,7 +42,7 @@ def truncate_sequences(sequences, right=4, left=4):
         end_index = min(len(sequence), len(sequence)//2 + right)
         trunc_seq = sequence[start_index:end_index]
         sequences_set.add(trunc_seq)
-        full_to_trunc_map[trunc_seq].append(sequence)
+        full_to_trunc_map[trunc_seq].add(sequence)
 
     return sequences_set, full_to_trunc_map
 
@@ -85,12 +85,19 @@ def find_che_phy_dist(sequences_set, max_mutations):
     distances_dict = {(aa1, aa2): distances_df.loc[aa1, aa2] for aa1 in distances_df.index for aa2 in distances_df.columns}
     
     couples = defaultdict(list)
+    worst_case_distances = {seq: get_worst_case_distance(seq, distances_df) for seq in neighbors}
+    # Optimize the loop
+    for seq in tqdm(neighbors):
+        seq_neighbors = neighbors[seq]  # Avoid repeated lookup
+        worst_case_distance = worst_case_distances[seq]  # Retrieve precomputed value
 
-    for seq in neighbors:
-        for var in neighbors[seq]:
+        for var in seq_neighbors:
+            # Sum distances using zip
             actual_distance = sum(distances_dict[(aa1, aa2)] for aa1, aa2 in zip(seq, var))
-            worst_case_distance = get_worst_case_distance(seq, distances_df)
+            
+            # Normalize the distance
             normalized_distance = actual_distance / worst_case_distance if worst_case_distance > 0 else 0
+            normalized_distance = float('%.3f'%(normalized_distance))
             couples[seq].append([var, normalized_distance])
 
     couples = {key: sorted(value, key=lambda x: x[1]) for key, value in couples.items()}

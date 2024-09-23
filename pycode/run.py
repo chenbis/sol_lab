@@ -31,7 +31,7 @@ def map_trunc_to_full(couples, full_to_trunc_map):
 
 
 def find_close_sequences(cdr3, max_mutations=3, right=4, left=4):
-    sequences_set, full_to_trunc_map = cpm.truncate_sequences(cdr3, 4, 4)
+    sequences_set, full_to_trunc_map = cpm.truncate_sequences(cdr3, right, left)
     couples_trunc = cpm.find_che_phy_dist(sequences_set, max_mutations)
     couples_full = map_trunc_to_full(couples_trunc, full_to_trunc_map)
     return couples_full
@@ -67,6 +67,7 @@ def map_clusters(couples, max_neig):
 
 
 def get_true_clusters(data, cdr3_header, eptiope_header):
+    
     clusters_dict = {}
 
     # Assign clusters based on common antigen
@@ -76,14 +77,14 @@ def get_true_clusters(data, cdr3_header, eptiope_header):
 
     return clusters_dict
 
-def classify(clusters, data):
+def classify(clusters, data, cdr3_header):
     cluster_classification = {}
     for cluster, tcrs in clusters.items():
         epitope_strengths = defaultdict(int)
         for tcr in list(tcrs):
             if tcr == "CASSEGWHSYEQYF":
                 print()
-            row = data[data['cdr3'] == tcr]
+            row = data[data[cdr3_header] == tcr]
             epitope = row['antigen.epitope'].values[0]
             strength = row['vdjdb.score'].values[0]
             epitope_strengths[epitope] += strength
@@ -99,14 +100,19 @@ def classify(clusters, data):
 def hamming_distance(seq1, seq2):
     return sum(c1 != c2 for c1, c2 in zip(seq1, seq2))
 
-def find_sequences_within_distance(cdr3_list, max_dist):
+def find_sequences_within_distance(cdr3_list, max_dist, right=4, left=4):
     """Find all sequences that are within a Hamming distance of 1 for each sequence."""
-    result = defaultdict(list)
+
+    sequences_set, full_to_trunc_map = cpm.truncate_sequences(cdr3_list, right, left)
+    sequences_set = list(sequences_set)
     
-    for i, seq1 in enumerate(cdr3_list):
+
+    couples_trunc = defaultdict(list)
+    
+    for i, seq1 in enumerate(sequences_set):
         # Initialize an empty list for each sequence
         
-        for seq2 in cdr3_list:
+        for seq2 in sequences_set:
             # Skip comparing the sequence with itself
             if seq1 == seq2:
                 continue
@@ -114,9 +120,10 @@ def find_sequences_within_distance(cdr3_list, max_dist):
             # If the Hamming distance is 1, add to the list
             distance = hamming_distance(seq1, seq2)
             if distance <= max_dist:
-                result[seq1].append([seq2, distance/8])
+                couples_trunc[seq1].append([seq2, distance/len(seq1)])
     
-    return result
+    couples_full = map_trunc_to_full(couples_trunc, full_to_trunc_map)
+    return couples_full
 
 
 def main():
@@ -125,6 +132,8 @@ def main():
     out_folder = "output_files/tests"
     out_name = "test"
     max_neig = 1
+    right = 4
+    left = 4
 
     # # 1000 sequences
     # data = pd.read_csv('files/forchen_F_26L.csv')
@@ -138,10 +147,12 @@ def main():
     cdr3_header = "cdr3"
     epitope_header = "antigen.epitope"
 
+
+
     data.drop_duplicates(subset=cdr3_header)
     cdr3 = list(data[cdr3_header])
     
-    couples_full = find_close_sequences(cdr3, max_mutations)
+    couples_full = find_close_sequences(cdr3, max_mutations, right, left)
     
     start_time = time.time()
     cpm.write_couples_file(couples_full, "{}/{}".format(out_folder, cdr3_header), "{}_full".format(out_name))
@@ -158,7 +169,7 @@ def main():
     # cluster_dict_true = get_true_clusters(data, cdr3_header, epitope_header)
 
     start_time = time.time()
-    cluster_classification = classify(cluster_dict_pred, data)
+    cluster_classification = classify(cluster_dict_pred, data, cdr3_header)
     end_time = time.time()
     elapsed_time = (end_time - start_time) / 60
     print(f"{elapsed_time:.2f} minutes")
@@ -169,13 +180,13 @@ def main():
     
     for cluster, tcrs in tqdm(cluster_dict_pred.items()):
         predicted_epitope = cluster_classification[cluster]
-        data.loc[data['cdr3'].isin(tcrs), 'epitope.pred'] = predicted_epitope
+        data.loc[data[cdr3_header].isin(tcrs), 'epitope.pred'] = predicted_epitope
 
 
     ### start ham ###
 
-    couples_ham = find_sequences_within_distance(cdr3, max_mutations)
-
+    couples_ham = find_sequences_within_distance(cdr3, max_mutations, right, left)
+    couples_ham = {key: sorted(value, key=lambda x: x[1]) for key, value in couples_ham.items()}
     start_time = time.time()
     cpm.write_couples_file(couples_ham, "{}/{}".format(out_folder, cdr3_header), "{}_ham".format(out_name))
     end_time = time.time()
@@ -190,7 +201,7 @@ def main():
     # cluster_dict_true = get_true_clusters(data, cdr3_header, epitope_header)
 
     start_time = time.time()
-    cluster_classification = classify(cluster_dict_pred, data)
+    cluster_classification = classify(cluster_dict_pred, data, cdr3_header)
     end_time = time.time()
     elapsed_time = (end_time - start_time) / 60
     print(f"{elapsed_time:.2f} minutes")
@@ -201,15 +212,13 @@ def main():
     
     for cluster, tcrs in tqdm(cluster_dict_pred.items()):
         predicted_epitope = cluster_classification[cluster]
-        data.loc[data['cdr3'].isin(tcrs), 'epitope.ham'] = predicted_epitope
+        data.loc[data[cdr3_header].isin(tcrs), 'epitope.ham'] = predicted_epitope
 
 
 
     ### end ham ###
 
-
-
-
+    data = data.drop_duplicates(subset=[cdr3_header])
     data.to_csv("{}/{}/predicted clusters.csv".format(out_folder, cdr3_header), encoding='utf-8', index=False)
 
     # data = pd.read_csv("output_files/tests/cdr3/predicted clusters.csv")
