@@ -125,9 +125,21 @@ def find_sequences_within_distance(cdr3_list, max_dist, right=4, left=4):
     couples_full = map_trunc_to_full(couples_trunc, full_to_trunc_map)
     return couples_full
 
-def prepare_data(data):
-    pass
+def prepare_data(data, cdr3_header, epitope_header):
+    
+    ## remove cases where cdr3 is associated with multiple epitopes
 
+
+    # Step 1: Group by 'cdr3' and 'antigen.epitope', and count occurrences
+    epitope_counts = data.groupby([cdr3_header, epitope_header]).size().reset_index(name='count')
+
+    # Step 2: Get the most frequent epitope for each 'cdr3'
+    most_frequent_epitopes = epitope_counts.loc[epitope_counts.groupby(cdr3_header)['count'].idxmax()]
+
+    # Step 3: Merge with the original dataframe to retain only the most frequent epitopes
+    df_filtered = data.merge(most_frequent_epitopes[[cdr3_header, epitope_header]], on=[cdr3_header, epitope_header])
+
+    return df_filtered
 
 def main():
 
