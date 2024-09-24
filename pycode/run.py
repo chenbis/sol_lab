@@ -125,6 +125,9 @@ def find_sequences_within_distance(cdr3_list, max_dist, right=4, left=4):
     couples_full = map_trunc_to_full(couples_trunc, full_to_trunc_map)
     return couples_full
 
+def prepare_data(data):
+    pass
+
 
 def main():
 
@@ -147,6 +150,7 @@ def main():
     cdr3_header = "cdr3"
     epitope_header = "antigen.epitope"
 
+    data = prepare_data(data, cdr3_header, epitope_header)
 
 
     data.drop_duplicates(subset=cdr3_header)
