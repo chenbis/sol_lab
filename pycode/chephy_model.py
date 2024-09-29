@@ -59,7 +59,7 @@ def invert_dict(d):
                 inverse[item].add(key) 
     return inverse
 
-def find_che_phy_dist(sequences_set, max_mutations):
+def find_che_phy_dist(sequences_set, max_mutations, max_dist):
     """
     finds chemical physical distance between all sequences in the set
     sequences set - set of sequences to compare
@@ -98,7 +98,8 @@ def find_che_phy_dist(sequences_set, max_mutations):
             # Normalize the distance
             normalized_distance = actual_distance / worst_case_distance if worst_case_distance > 0 else 0
             normalized_distance = float('%.3f'%(normalized_distance))
-            couples[seq].append([var, normalized_distance])
+            if not normalized_distance > max_dist:
+                couples[seq].append([var, normalized_distance])
 
     couples = {key: sorted(value, key=lambda x: x[1]) for key, value in couples.items()}
     return couples

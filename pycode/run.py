@@ -30,9 +30,9 @@ def map_trunc_to_full(couples, full_to_trunc_map):
     return couples_full
 
 
-def find_close_sequences(cdr3, max_mutations=3, right=4, left=4):
+def find_close_sequences(cdr3, max_dist=0.5, max_mutations=3, right=4, left=4):
     sequences_set, full_to_trunc_map = cpm.truncate_sequences(cdr3, right, left)
-    couples_trunc = cpm.find_che_phy_dist(sequences_set, max_mutations)
+    couples_trunc = cpm.find_che_phy_dist(sequences_set, max_mutations, max_dist)
     couples_full = map_trunc_to_full(couples_trunc, full_to_trunc_map)
     return couples_full
 
@@ -42,7 +42,7 @@ def map_clusters(couples, max_neig):
     G = nx.Graph()
 
     # Add edges to the graph based on the dictionary
-    for node, neighbors in couples.items():
+    for node, neighbors in tqdm(couples.items()):
         count = 0
         for neighbor, weight in neighbors:
             if count < max_neig:
@@ -79,7 +79,7 @@ def get_true_clusters(data, cdr3_header, eptiope_header):
 
 def classify(clusters, data, cdr3_header):
     cluster_classification = {}
-    for cluster, tcrs in clusters.items():
+    for cluster, tcrs in tqdm(clusters.items()):
         epitope_strengths = defaultdict(int)
         for tcr in list(tcrs):
             if tcr == "CASSEGWHSYEQYF":
@@ -146,9 +146,18 @@ def main():
     max_mutations = 8
     out_folder = "output_files/tests"
     out_name = "test"
-    max_neig = 1
+    max_neig = 2
     right = 4
     left = 4
+    max_dist=0.2
+    
+
+    print("running with:\n"\
+    f"max_mutations = {max_mutations}\n"\
+    f"max_neig = {max_neig}\n"\
+    f"right = {right}\n"\
+    f"left = {left}\n"\
+    f"max_dist = {max_dist}")
 
     # # 1000 sequences
     # data = pd.read_csv('files/forchen_F_26L.csv')
@@ -157,7 +166,7 @@ def main():
 
     # vdjdb beta chain
     data = pd.read_csv("files/vdjdb_cdr3.csv")
-    data = data[data["vdjdb.score"] == 3]
+    # data = data[(data["vdjdb.score"] == 3)]
     
     cdr3_header = "cdr3"
     epitope_header = "antigen.epitope"
@@ -168,7 +177,7 @@ def main():
     data.drop_duplicates(subset=cdr3_header)
     cdr3 = list(data[cdr3_header])
     
-    couples_full = find_close_sequences(cdr3, max_mutations, right, left)
+    couples_full = find_close_sequences(cdr3, max_dist=max_dist, max_mutations=max_mutations, right=right, left=left)
     
     start_time = time.time()
     cpm.write_couples_file(couples_full, "{}/{}".format(out_folder, cdr3_header), "{}_full".format(out_name))
@@ -177,18 +186,9 @@ def main():
     print(f"Time taken to write full couples: {elapsed_time:.2f} minutes")
 
 
-    start_time = time.time()
     cluster_dict_pred = map_clusters(couples_full, max_neig)
-    end_time = time.time()
-    elapsed_time = (end_time - start_time) / 60
-    print(f"{elapsed_time:.2f} minutes")
-    # cluster_dict_true = get_true_clusters(data, cdr3_header, epitope_header)
-
-    start_time = time.time()
     cluster_classification = classify(cluster_dict_pred, data, cdr3_header)
-    end_time = time.time()
-    elapsed_time = (end_time - start_time) / 60
-    print(f"{elapsed_time:.2f} minutes")
+
 
 
     data['epitope.pred'] = None
@@ -199,43 +199,43 @@ def main():
         data.loc[data[cdr3_header].isin(tcrs), 'epitope.pred'] = predicted_epitope
 
 
-    ### start ham ###
+    ## start ham ###
 
-    couples_ham = find_sequences_within_distance(cdr3, max_mutations, right, left)
-    couples_ham = {key: sorted(value, key=lambda x: x[1]) for key, value in couples_ham.items()}
-    start_time = time.time()
-    cpm.write_couples_file(couples_ham, "{}/{}".format(out_folder, cdr3_header), "{}_ham".format(out_name))
-    end_time = time.time()
-    elapsed_time = (end_time - start_time) / 60
-    print(f"Time taken to write full couples: {elapsed_time:.2f} minutes")
+    # couples_ham = find_sequences_within_distance(cdr3, max_mutations, right, left)
+    # couples_ham = {key: sorted(value, key=lambda x: x[1]) for key, value in couples_ham.items()}
+    # start_time = time.time()
+    # cpm.write_couples_file(couples_ham, "{}/{}".format(out_folder, cdr3_header), "{}_ham".format(out_name))
+    # end_time = time.time()
+    # elapsed_time = (end_time - start_time) / 60
+    # print(f"Time taken to write full couples: {elapsed_time:.2f} minutes")
 
-    start_time = time.time()
-    cluster_dict_pred = map_clusters(couples_ham, max_neig)
-    end_time = time.time()
-    elapsed_time = (end_time - start_time) / 60
-    print(f"{elapsed_time:.2f} minutes")
-    # cluster_dict_true = get_true_clusters(data, cdr3_header, epitope_header)
+    # start_time = time.time()
+    # cluster_dict_pred = map_clusters(couples_ham, max_neig)
+    # end_time = time.time()
+    # elapsed_time = (end_time - start_time) / 60
+    # print(f"{elapsed_time:.2f} minutes")
+    # # cluster_dict_true = get_true_clusters(data, cdr3_header, epitope_header)
 
-    start_time = time.time()
-    cluster_classification = classify(cluster_dict_pred, data, cdr3_header)
-    end_time = time.time()
-    elapsed_time = (end_time - start_time) / 60
-    print(f"{elapsed_time:.2f} minutes")
+    # start_time = time.time()
+    # cluster_classification = classify(cluster_dict_pred, data, cdr3_header)
+    # end_time = time.time()
+    # elapsed_time = (end_time - start_time) / 60
+    # print(f"{elapsed_time:.2f} minutes")
 
 
-    data['epitope.ham'] = None
+    # data['epitope.ham'] = None
 
     
-    for cluster, tcrs in tqdm(cluster_dict_pred.items()):
-        predicted_epitope = cluster_classification[cluster]
-        data.loc[data[cdr3_header].isin(tcrs), 'epitope.ham'] = predicted_epitope
+    # for cluster, tcrs in tqdm(cluster_dict_pred.items()):
+    #     predicted_epitope = cluster_classification[cluster]
+    #     data.loc[data[cdr3_header].isin(tcrs), 'epitope.ham'] = predicted_epitope
 
 
 
     ### end ham ###
 
     data = data.drop_duplicates(subset=[cdr3_header])
-    data.to_csv("{}/{}/predicted clusters.csv".format(out_folder, cdr3_header), encoding='utf-8', index=False)
+    
 
     # data = pd.read_csv("output_files/tests/cdr3/predicted clusters.csv")
 
@@ -259,25 +259,26 @@ def main():
     print(f'chephy f1_score: {f1}')
     print()
 
+    # data.to_csv("{}/{}/predicted clusters.csv".format(out_folder, cdr3_header), encoding='utf-8', index=False)
 
-    data_ham = data.dropna(subset=["epitope.ham"])
+    # data_ham = data.dropna(subset=["epitope.ham"])
 
-    # Calculate accuracy
-    accuracy = accuracy_score(data_ham['antigen.epitope'], data_ham['epitope.ham'])
+    # # Calculate accuracy
+    # accuracy = accuracy_score(data_ham['antigen.epitope'], data_ham['epitope.ham'])
 
-    # Calculate precision
-    precision = precision_score(data_ham['antigen.epitope'], data_ham['epitope.ham'], average='weighted', zero_division=0)
+    # # Calculate precision
+    # precision = precision_score(data_ham['antigen.epitope'], data_ham['epitope.ham'], average='weighted', zero_division=0)
 
-    # Calculate recall
-    recall = recall_score(data_ham['antigen.epitope'], data_ham['epitope.ham'], average='weighted', zero_division=0)
+    # # Calculate recall
+    # recall = recall_score(data_ham['antigen.epitope'], data_ham['epitope.ham'], average='weighted', zero_division=0)
 
-    f1 = f1_score(data_ham['antigen.epitope'], data_ham['epitope.ham'], average='weighted', zero_division=0)
+    # f1 = f1_score(data_ham['antigen.epitope'], data_ham['epitope.ham'], average='weighted', zero_division=0)
 
-    # Print the results
-    print(f'ham Accuracy: {accuracy}')
-    print(f'ham Precision: {precision}')
-    print(f'ham Recall: {recall}')
-    print(f'ham f1_score: {f1}')
+    # # Print the results
+    # print(f'ham Accuracy: {accuracy}')
+    # print(f'ham Precision: {precision}')
+    # print(f'ham Recall: {recall}')
+    # print(f'ham f1_score: {f1}')
 
 
 
