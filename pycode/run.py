@@ -144,9 +144,9 @@ def prepare_data(data, cdr3_header, epitope_header):
 def main():
 
     max_mutations = 8
-    out_folder = "output_files/tests"
+    out_folder = "output_files/full_run"
     out_name = "test"
-    max_neig = 2
+    max_neig = 3
     right = 4
     left = 4
     max_dist=0.2
@@ -259,7 +259,7 @@ def main():
     print(f'chephy f1_score: {f1}')
     print()
 
-    # data.to_csv("{}/{}/predicted clusters.csv".format(out_folder, cdr3_header), encoding='utf-8', index=False)
+    data.to_csv("{}/{}/predicted clusters.csv".format(out_folder, cdr3_header), encoding='utf-8', index=False)
 
     # data_ham = data.dropna(subset=["epitope.ham"])
 
