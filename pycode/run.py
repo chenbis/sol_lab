@@ -143,8 +143,8 @@ def prepare_data(data, cdr3_header, epitope_header):
 
 def main():
 
-    max_mutations = 8
-    out_folder = "output_files/full_run"
+    max_mutations = 5
+    out_folder = "output_files/for_sol"
     out_name = "test"
     max_neig = 3
     right = 4
@@ -163,15 +163,19 @@ def main():
     # data = pd.read_csv('files/forchen_F_26L.csv')
     # cdr3_header = "cdr3_amino_acid"
 
+    # # 10000 sequences
+    data = pd.read_csv("files/cdrs_list.csv")
+    cdr3_header = "Sequences"
 
-    # vdjdb beta chain
-    data = pd.read_csv("files/vdjdb_cdr3.csv")
+
+    # # vdjdb beta chain
+    # data = pd.read_csv("files/vdjdb_cdr3.csv")
     # data = data[(data["vdjdb.score"] == 3)]
     
-    cdr3_header = "cdr3"
-    epitope_header = "antigen.epitope"
+    # cdr3_header = "cdr3"
+    # epitope_header = "antigen.epitope"
 
-    data = prepare_data(data, cdr3_header, epitope_header)
+    # data = prepare_data(data, cdr3_header, epitope_header)
 
 
     data.drop_duplicates(subset=cdr3_header)
@@ -234,30 +238,30 @@ def main():
 
     ### end ham ###
 
-    data = data.drop_duplicates(subset=[cdr3_header])
+    # data = data.drop_duplicates(subset=[cdr3_header])
     
 
-    # data = pd.read_csv("output_files/tests/cdr3/predicted clusters.csv")
+    # # data = pd.read_csv("output_files/tests/cdr3/predicted clusters.csv")
 
-    data_chepy = data.dropna(subset=["epitope.pred"])
+    # data_chepy = data.dropna(subset=["epitope.pred"])
 
-    # Calculate accuracy
-    accuracy = accuracy_score(data_chepy['antigen.epitope'], data_chepy['epitope.pred'])
+    # # Calculate accuracy
+    # accuracy = accuracy_score(data_chepy['antigen.epitope'], data_chepy['epitope.pred'])
 
-    # Calculate precision
-    precision = precision_score(data_chepy['antigen.epitope'], data_chepy['epitope.pred'], average='weighted', zero_division=0)
+    # # Calculate precision
+    # precision = precision_score(data_chepy['antigen.epitope'], data_chepy['epitope.pred'], average='weighted', zero_division=0)
 
-    # Calculate recall
-    recall = recall_score(data_chepy['antigen.epitope'], data_chepy['epitope.pred'], average='weighted', zero_division=0)
+    # # Calculate recall
+    # recall = recall_score(data_chepy['antigen.epitope'], data_chepy['epitope.pred'], average='weighted', zero_division=0)
 
-    f1 = f1_score(data_chepy['antigen.epitope'], data_chepy['epitope.pred'], average='weighted', zero_division=0)
+    # f1 = f1_score(data_chepy['antigen.epitope'], data_chepy['epitope.pred'], average='weighted', zero_division=0)
 
-    # Print the results
-    print(f'chephy Accuracy: {accuracy}')
-    print(f'chephy Precision: {precision}')
-    print(f'chephy Recall: {recall}')
-    print(f'chephy f1_score: {f1}')
-    print()
+    # # Print the results
+    # print(f'chephy Accuracy: {accuracy}')
+    # print(f'chephy Precision: {precision}')
+    # print(f'chephy Recall: {recall}')
+    # print(f'chephy f1_score: {f1}')
+    # print()
 
     data.to_csv("{}/{}/predicted clusters.csv".format(out_folder, cdr3_header), encoding='utf-8', index=False)
 
