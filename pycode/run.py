@@ -143,10 +143,10 @@ def prepare_data(data, cdr3_header, epitope_header):
 
 def main():
 
-    max_mutations = 5
-    out_folder = "output_files/for_sol"
+    max_mutations = 8
+    out_folder = "output_files/vdj3_3mut"
     out_name = "test"
-    max_neig = 3
+    max_neig = 8
     right = 4
     left = 4
     max_dist=0.2
@@ -170,7 +170,7 @@ def main():
 
     # # vdjdb beta chain
     # data = pd.read_csv("files/vdjdb_cdr3.csv")
-    # data = data[(data["vdjdb.score"] == 3)]
+    # data = data[(data["vdjdb.score"] >= 3)]
     
     # cdr3_header = "cdr3"
     # epitope_header = "antigen.epitope"
@@ -190,53 +190,20 @@ def main():
     print(f"Time taken to write full couples: {elapsed_time:.2f} minutes")
 
 
-    cluster_dict_pred = map_clusters(couples_full, max_neig)
-    cluster_classification = classify(cluster_dict_pred, data, cdr3_header)
-
-
-
-    data['epitope.pred'] = None
-
-    
-    for cluster, tcrs in tqdm(cluster_dict_pred.items()):
-        predicted_epitope = cluster_classification[cluster]
-        data.loc[data[cdr3_header].isin(tcrs), 'epitope.pred'] = predicted_epitope
-
-
-    ## start ham ###
-
-    # couples_ham = find_sequences_within_distance(cdr3, max_mutations, right, left)
-    # couples_ham = {key: sorted(value, key=lambda x: x[1]) for key, value in couples_ham.items()}
-    # start_time = time.time()
-    # cpm.write_couples_file(couples_ham, "{}/{}".format(out_folder, cdr3_header), "{}_ham".format(out_name))
-    # end_time = time.time()
-    # elapsed_time = (end_time - start_time) / 60
-    # print(f"Time taken to write full couples: {elapsed_time:.2f} minutes")
-
-    # start_time = time.time()
-    # cluster_dict_pred = map_clusters(couples_ham, max_neig)
-    # end_time = time.time()
-    # elapsed_time = (end_time - start_time) / 60
-    # print(f"{elapsed_time:.2f} minutes")
-    # # cluster_dict_true = get_true_clusters(data, cdr3_header, epitope_header)
-
-    # start_time = time.time()
+    # cluster_dict_pred = map_clusters(couples_full, max_neig)
     # cluster_classification = classify(cluster_dict_pred, data, cdr3_header)
-    # end_time = time.time()
-    # elapsed_time = (end_time - start_time) / 60
-    # print(f"{elapsed_time:.2f} minutes")
 
 
-    # data['epitope.ham'] = None
+
+    # data['epitope.pred'] = None
 
     
     # for cluster, tcrs in tqdm(cluster_dict_pred.items()):
     #     predicted_epitope = cluster_classification[cluster]
-    #     data.loc[data[cdr3_header].isin(tcrs), 'epitope.ham'] = predicted_epitope
+    #     data.loc[data[cdr3_header].isin(tcrs), 'epitope.pred'] = predicted_epitope
 
 
-
-    ### end ham ###
+    ### Accuracy check ###
 
     # data = data.drop_duplicates(subset=[cdr3_header])
     
@@ -263,26 +230,12 @@ def main():
     # print(f'chephy f1_score: {f1}')
     # print()
 
+    ### End Accuracy check ###
+
+
     data.to_csv("{}/{}/predicted clusters.csv".format(out_folder, cdr3_header), encoding='utf-8', index=False)
 
-    # data_ham = data.dropna(subset=["epitope.ham"])
 
-    # # Calculate accuracy
-    # accuracy = accuracy_score(data_ham['antigen.epitope'], data_ham['epitope.ham'])
-
-    # # Calculate precision
-    # precision = precision_score(data_ham['antigen.epitope'], data_ham['epitope.ham'], average='weighted', zero_division=0)
-
-    # # Calculate recall
-    # recall = recall_score(data_ham['antigen.epitope'], data_ham['epitope.ham'], average='weighted', zero_division=0)
-
-    # f1 = f1_score(data_ham['antigen.epitope'], data_ham['epitope.ham'], average='weighted', zero_division=0)
-
-    # # Print the results
-    # print(f'ham Accuracy: {accuracy}')
-    # print(f'ham Precision: {precision}')
-    # print(f'ham Recall: {recall}')
-    # print(f'ham f1_score: {f1}')
 
 
 
