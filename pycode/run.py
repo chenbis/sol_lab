@@ -144,12 +144,12 @@ def prepare_data(data, cdr3_header, epitope_header):
 def main():
 
     max_mutations = 8
-    out_folder = "output_files/vdj3_3mut"
+    out_folder = "output_files/full_graph_vdj3"
     out_name = "test"
     max_neig = 8
     right = 4
     left = 4
-    max_dist=0.2
+    max_dist=1
     
 
     print("running with:\n"\
@@ -163,16 +163,16 @@ def main():
     # data = pd.read_csv('files/forchen_F_26L.csv')
     # cdr3_header = "cdr3_amino_acid"
 
-    # # 10000 sequences
-    data = pd.read_csv("files/cdrs_list.csv")
-    cdr3_header = "Sequences"
+    # # # 10000 sequences
+    # data = pd.read_csv("files/cdrs_list.csv")
+    # cdr3_header = "Sequences"
 
 
-    # # vdjdb beta chain
-    # data = pd.read_csv("files/vdjdb_cdr3.csv")
-    # data = data[(data["vdjdb.score"] >= 3)]
+    # vdjdb beta chain
+    data = pd.read_csv("files/vdjdb_cdr3.csv")
+    data = data[(data["vdjdb.score"] >= 3)]
     
-    # cdr3_header = "cdr3"
+    cdr3_header = "cdr3"
     # epitope_header = "antigen.epitope"
 
     # data = prepare_data(data, cdr3_header, epitope_header)
@@ -233,7 +233,7 @@ def main():
     ### End Accuracy check ###
 
 
-    data.to_csv("{}/{}/predicted clusters.csv".format(out_folder, cdr3_header), encoding='utf-8', index=False)
+    # data.to_csv("{}/{}/predicted clusters.csv".format(out_folder, cdr3_header), encoding='utf-8', index=False)
 
 
 
