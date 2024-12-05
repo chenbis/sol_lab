@@ -183,58 +183,11 @@ def main():
     
     couples_full = find_close_sequences(cdr3, max_dist=max_dist, max_mutations=max_mutations, right=right, left=left)
     
-    start_time = time.time()
     cpm.write_couples_file(couples_full, "{}/{}".format(out_folder, cdr3_header), "{}_full".format(out_name))
-    end_time = time.time()
-    elapsed_time = (end_time - start_time) / 60
-    print(f"Time taken to write full couples: {elapsed_time:.2f} minutes")
-
-
-    # cluster_dict_pred = map_clusters(couples_full, max_neig)
-    # cluster_classification = classify(cluster_dict_pred, data, cdr3_header)
 
 
 
-    # data['epitope.pred'] = None
-
-    
-    # for cluster, tcrs in tqdm(cluster_dict_pred.items()):
-    #     predicted_epitope = cluster_classification[cluster]
-    #     data.loc[data[cdr3_header].isin(tcrs), 'epitope.pred'] = predicted_epitope
-
-
-    ### Accuracy check ###
-
-    # data = data.drop_duplicates(subset=[cdr3_header])
-    
-
-    # # data = pd.read_csv("output_files/tests/cdr3/predicted clusters.csv")
-
-    # data_chepy = data.dropna(subset=["epitope.pred"])
-
-    # # Calculate accuracy
-    # accuracy = accuracy_score(data_chepy['antigen.epitope'], data_chepy['epitope.pred'])
-
-    # # Calculate precision
-    # precision = precision_score(data_chepy['antigen.epitope'], data_chepy['epitope.pred'], average='weighted', zero_division=0)
-
-    # # Calculate recall
-    # recall = recall_score(data_chepy['antigen.epitope'], data_chepy['epitope.pred'], average='weighted', zero_division=0)
-
-    # f1 = f1_score(data_chepy['antigen.epitope'], data_chepy['epitope.pred'], average='weighted', zero_division=0)
-
-    # # Print the results
-    # print(f'chephy Accuracy: {accuracy}')
-    # print(f'chephy Precision: {precision}')
-    # print(f'chephy Recall: {recall}')
-    # print(f'chephy f1_score: {f1}')
-    # print()
-
-    ### End Accuracy check ###
-
-
-    # data.to_csv("{}/{}/predicted clusters.csv".format(out_folder, cdr3_header), encoding='utf-8', index=False)
-
+   
 
 
 
