@@ -1,6 +1,5 @@
 import pandas as pd
 from collections import defaultdict
-import csv
 from tqdm import tqdm
 from pathlib import Path
 import ujson

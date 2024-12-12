@@ -5,6 +5,7 @@ import networkx as nx
 import pandas as pd
 from tqdm import tqdm
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+import argparse, datetime, csv
 
 def map_trunc_to_full(couples, full_to_trunc_map):
     # Initialize an empty dictionary for the full couples
@@ -141,23 +142,42 @@ def prepare_data(data, cdr3_header, epitope_header):
 
     return df_filtered
 
+def get_time():
+    return datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+
+def save_params(parmas_file, args):
+
+    args_dict = vars(args)
+    # Write to a CSV file
+    with open(parmas_file, "w", newline="") as file:
+        writer = csv.writer(file)
+        # Write header (keys)
+        writer.writerow(args_dict.keys())
+        # Write values
+        writer.writerow(args_dict.values())
+
+
 def main():
 
-    max_mutations = 8
-    out_folder = "output_files/full_graph_vdj3"
-    out_name = "test"
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-m", "--mutations", default=8, type=int, help="Maximum number of mutations, default is 8")
+    parser.add_argument("-of", "--out_folder", default=get_time(), help="Name of output sub folder, default is current time")
+    parser.add_argument("-r", "--right", default=4, help="Trim from the right side, default is 4")
+    parser.add_argument("-l", "--left", default=4, help="Trim from the left side, default is 4")
+
+
+    args = parser.parse_args()
+
+
+    max_mutations = args.mutations
+    out_folder = f"output/{args.out_folder}"
+    out_name = "neighbors"
+    params_file = "params.csv"
     max_neig = 8
-    right = 4
-    left = 4
+    right = args.right
+    left = args.left
     max_dist=1
     
-
-    print("running with:\n"\
-    f"max_mutations = {max_mutations}\n"\
-    f"max_neig = {max_neig}\n"\
-    f"right = {right}\n"\
-    f"left = {left}\n"\
-    f"max_dist = {max_dist}")
 
     # # 1000 sequences
     # data = pd.read_csv('files/forchen_F_26L.csv')
@@ -183,12 +203,7 @@ def main():
     
     couples_full = find_close_sequences(cdr3, max_dist=max_dist, max_mutations=max_mutations, right=right, left=left)
     
-    cpm.write_couples_file(couples_full, "{}/{}".format(out_folder, cdr3_header), "{}_full".format(out_name))
-
-
-
-   
-
+    cpm.write_couples_file(couples_full, "{}/{}".format(out_folder, cdr3_header), f"{out_name}")
 
 
 
