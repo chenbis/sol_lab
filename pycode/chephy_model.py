@@ -122,7 +122,7 @@ def write_couples_file(couples, directory, filename):
     path = Path(directory)
 
     path.mkdir(parents=True, exist_ok=True)
-    output_file = "{}/{}.json".format(directory, filename)
+    output_file = f"{directory}/{filename}.json"
     with open(output_file, "w") as f:
         ujson.dump(couples, f)
 
