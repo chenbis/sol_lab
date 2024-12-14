@@ -20,13 +20,13 @@ def map_trunc_to_full(couples, full_to_trunc_map):
         for original_seq in original_seqs:
             
             # Iterate over each neighbor in the neighbors list
-            for neighbor, distance in neighbors:
+            for neighbor, distance, diff in neighbors:
                 # Get the original sequences for the neighbor
                 neighbor_original_seqs = full_to_trunc_map.get(neighbor, [])
                 
                 # Add each original neighbor sequence with the same distance
                 for neighbor_original_seq in neighbor_original_seqs:
-                    couples_full[original_seq].append([neighbor_original_seq, distance])
+                    couples_full[original_seq].append([neighbor_original_seq, distance, diff])
 
     return couples_full
 
@@ -173,7 +173,6 @@ def main():
     out_folder = f"output/{args.out_folder}"
     out_name = "neighbors"
     params_file = "params.csv"
-    max_neig = 8
     right = args.right
     left = args.left
     max_dist=1
@@ -193,7 +192,6 @@ def main():
     data = data[(data["vdjdb.score"] >= 3)]
     
     cdr3_header = "cdr3"
-    # epitope_header = "antigen.epitope"
 
     # data = prepare_data(data, cdr3_header, epitope_header)
 
@@ -203,7 +201,8 @@ def main():
     
     couples_full = find_close_sequences(cdr3, max_dist=max_dist, max_mutations=max_mutations, right=right, left=left)
     
-    cpm.write_couples_file(couples_full, "{}/{}".format(out_folder, cdr3_header), f"{out_name}")
+    cpm.write_couples_file(couples_full, f"{out_folder}", f"{out_name}")
+    save_params(f"{out_folder}/{params_file}", args)
 
 
 

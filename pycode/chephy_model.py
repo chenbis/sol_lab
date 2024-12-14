@@ -17,7 +17,7 @@ def traverse_tree(tree, sequence, max_diff, path="", current_diff=0, depth=0):
         return []
     
     if not tree:
-        return [path] if current_diff <= max_diff else []
+        return [(path, current_diff)] if current_diff <= max_diff else []
     
     matching_sequences = []
     for char, subtree in tree.items():
@@ -45,18 +45,31 @@ def truncate_sequences(sequences, right=4, left=4):
 
     return sequences_set, full_to_trunc_map
 
-def invert_dict(d): 
-    inverse = dict() 
-    for key in d: 
-        # Go through the list that is saved in the dict:
-        for item in d[key]:
-            # Check if in the inverted dict the key exists
-            if item not in inverse: 
-                # If not create a new list
-                inverse[item] = {key} 
-            else: 
-                inverse[item].add(key) 
-    return inverse
+# def invert_dict(d): 
+#     inverse = dict() 
+#     for key in d: 
+#         # Go through the list that is saved in the dict:
+#         for item in d[key]:
+
+#             seq = item[0]
+#             item = (key, item[1])
+
+
+#             # Check if in the inverted dict the key exists
+#             if seq not in inverse: 
+#                 # If not create a new list
+#                 inverse[seq] = {item} 
+#             else: 
+#                 inverse[seq].add(item) 
+#     return inverse
+
+
+def make_symmetric_neighbors(neighbors):
+    combined = defaultdict(set, neighbors)
+    for key, values in neighbors.items():
+        for seq, value in values:
+            combined[seq].add((key, value))  # Add the inverted edge
+    return combined
 
 def find_che_phy_dist(sequences_set, max_mutations, max_dist):
     """
@@ -69,15 +82,17 @@ def find_che_phy_dist(sequences_set, max_mutations, max_dist):
     tree = create_tree(sequences_set)
     for seq in tqdm(sequences_set):
         results = find_sequences_within_distance(tree, seq, max_mutations)
-        results.remove(seq)
+        results.remove((seq,0))
         if results:
             neighbors[seq] = set(results)
     
     
-    inverted = invert_dict(neighbors)
-    neighbors = defaultdict(set, {k: neighbors.get(k, set()) | inverted.get(k, set())\
-                                   for k in set(neighbors) | set(inverted)})
+    # inverted = invert_dict(neighbors)
+    # neighbors = defaultdict(set, {k: neighbors.get(k, set()) | inverted.get(k, set())\
+    #                                for k in set(neighbors) | set(inverted)})
     
+    neighbors = make_symmetric_neighbors(neighbors)
+
 
     distances_csv = "distance_matrix.csv"
     distances_df = pd.read_csv(distances_csv, index_col=0)
@@ -92,13 +107,13 @@ def find_che_phy_dist(sequences_set, max_mutations, max_dist):
 
         for var in seq_neighbors:
             # Sum distances using zip
-            actual_distance = sum(distances_dict[(aa1, aa2)] for aa1, aa2 in zip(seq, var))
+            actual_distance = sum(distances_dict[(aa1, aa2)] for aa1, aa2 in zip(seq, var[0]))
             
             # Normalize the distance
             normalized_distance = actual_distance / worst_case_distance if worst_case_distance > 0 else 0
             normalized_distance = float('%.3f'%(normalized_distance))
             if not normalized_distance > max_dist:
-                couples[seq].append([var, normalized_distance])
+                couples[seq].append([var[0], normalized_distance, var[1]])
 
     couples = {key: sorted(value, key=lambda x: x[1]) for key, value in couples.items()}
     return couples
