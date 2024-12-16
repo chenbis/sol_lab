@@ -1,10 +1,7 @@
 import chephy_model as cpm
 from collections import defaultdict
-import time
-import networkx as nx
 import pandas as pd
 from tqdm import tqdm
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 import argparse, datetime, csv
 
 def map_trunc_to_full(couples, full_to_trunc_map):
