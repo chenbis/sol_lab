@@ -160,6 +160,7 @@ def save_params(parmas_file, args):
 def main():
 
     parser = argparse.ArgumentParser()
+    parser.add_argument("-i", "--input", default="files/vdjdb_cdr3.csv", help="Input csv for the model to train on, must be a csv file")
     parser.add_argument("-m", "--mutations", default=8, type=int, help="Maximum number of mutations, default is 8")
     parser.add_argument("-of", "--out_folder", default=get_time(), help="Name of output sub folder, default is current time")
     parser.add_argument("-r", "--right", default=4, help="Trim from the right side, default is 4")
@@ -175,8 +176,10 @@ def main():
     params_file = "params.csv"
     right = args.right
     left = args.left
+    input_file = args.input
     max_dist=1
     
+    data = pd.read_csv(input_file)
 
     # # 1000 sequences
     # data = pd.read_csv('files/forchen_F_26L.csv')
@@ -188,8 +191,8 @@ def main():
 
 
     # vdjdb beta chain
-    data = pd.read_csv("files/vdjdb_cdr3.csv")
-    data = data[(data["vdjdb.score"] >= 3)]
+    # data = pd.read_csv("files/vdjdb_cdr3.csv")
+    # data = data[(data["vdjdb.score"] >= 3)]
     
     cdr3_header = "cdr3"
 
