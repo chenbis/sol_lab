@@ -9,26 +9,32 @@ import argparse, datetime, csv
 
 def map_trunc_to_full(couples, full_to_trunc_map):
     # Initialize an empty dictionary for the full couples
-    couples_full = defaultdict(list)
+    couples_full = defaultdict(dict)
 
-    # Iterate over each key, value pair in the couples dictionary
+    # Iterate over each truncated sequence and its neighbors
     for short_seq, neighbors in couples.items():
         # Get the original sequences for the current short sequence
-        original_seqs = set(full_to_trunc_map.get(short_seq, []))
+        original_seqs = full_to_trunc_map.get(short_seq, [])
 
-        # Iterate over each original sequence
-        for original_seq in original_seqs:
+        # Iterate over each neighbor and its details
+        for neighbor, details in neighbors.items():
+            # Get the original sequences for the neighbor
+            neighbor_original_seqs = full_to_trunc_map.get(neighbor, [])
             
-            # Iterate over each neighbor in the neighbors list
-            for neighbor, distance, diff in neighbors:
-                # Get the original sequences for the neighbor
-                neighbor_original_seqs = full_to_trunc_map.get(neighbor, [])
-                
-                # Add each original neighbor sequence with the same distance
+            # Add each pair of original sequences with their weight and dist
+            for original_seq in original_seqs:
                 for neighbor_original_seq in neighbor_original_seqs:
-                    couples_full[original_seq].append([neighbor_original_seq, distance, diff])
+                    # Ensure the nested structure is maintained
+                    if original_seq not in couples_full:
+                        couples_full[original_seq] = {}
+                    couples_full[original_seq][neighbor_original_seq] = {
+                        "weight": details["weight"],
+                        "dist": details["dist"]
+                    }
 
-    return couples_full
+    return dict(couples_full)
+
+
 
 
 def find_close_sequences(cdr3, max_dist=0.5, max_mutations=3, right=4, left=4):
@@ -38,32 +44,32 @@ def find_close_sequences(cdr3, max_dist=0.5, max_mutations=3, right=4, left=4):
     return couples_full
 
 
-def map_clusters(couples, max_neig):
-    # Create a graph
-    G = nx.Graph()
+# def map_clusters(couples, max_neig):
+#     # Create a graph
+#     G = nx.Graph()
 
-    # Add edges to the graph based on the dictionary
-    for node, neighbors in tqdm(couples.items()):
-        count = 0
-        for neighbor, weight in neighbors:
-            if count < max_neig:
-                G.add_edge(node, neighbor, weight=weight)
-                count += 1
+#     # Add edges to the graph based on the dictionary
+#     for node, neighbors in tqdm(couples.items()):
+#         count = 0
+#         for neighbor, weight in neighbors:
+#             if count < max_neig:
+#                 G.add_edge(node, neighbor, weight=weight)
+#                 count += 1
 
 
-    # Find connected components
-    clusters = list(nx.connected_components(G))
+#     # Find connected components
+#     clusters = list(nx.connected_components(G))
 
-    # Create a dictionary to map sequences to cluster numbers
-    cluster_dict = {}
-    # for cluster_number, cluster in enumerate(clusters):
-    #     for sequence in cluster:
-    #         cluster_dict[sequence] = cluster_number    
+#     # Create a dictionary to map sequences to cluster numbers
+#     cluster_dict = {}
+#     # for cluster_number, cluster in enumerate(clusters):
+#     #     for sequence in cluster:
+#     #         cluster_dict[sequence] = cluster_number    
 
-    for cluster_number, cluster in enumerate(clusters):
-        cluster_dict[cluster_number] = cluster
+#     for cluster_number, cluster in enumerate(clusters):
+#         cluster_dict[cluster_number] = cluster
    
-    return cluster_dict
+#     return cluster_dict
 
 
 
